@@ -8,10 +8,13 @@ st.set_page_config(page_title="Ferretería Universal", layout="wide")
 def cargar_datos():
     try:
         url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-        # Cargamos directamente el CSV desde el link de publicación
-        df = pd.read_csv(url)
-        # Limpiamos nombres de columnas por si acaso
-        df.columns = df.columns.str.strip()
+        # Cargamos el CSV ignorando errores de filas mal formadas
+        df = pd.read_csv(url, on_bad_lines='skip')
+        # Nos quedamos solo con las 4 columnas que nos interesan
+        df = df.iloc[:, :4] 
+        df.columns = ['ID', 'Nombre', 'Precio', 'Stock']
+        # Quitamos filas que no tengan nombre de producto
+        df = df.dropna(subset=['Nombre'])
         return df
     except Exception as e:
         st.error(f"Error al conectar con el inventario: {e}")
