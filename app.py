@@ -2,26 +2,27 @@ import streamlit as st
 import pandas as pd
 
 # 1. Configuración de la App
-st.set_page_config(page_title="Ferretería Pro", layout="wide")
+st.set_page_config(page_title="Ferretería Universal", layout="wide")
 
-# 2. Función para leer datos directamente (Más rápido y sin errores)
+# 2. Función de carga ultra rápida (Lee el CSV publicado)
 def cargar_datos():
-    url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-    # Forzamos la lectura como CSV para evitar bloqueos de Google
-    csv_url = url.replace("/edit#gid=", "/export?format=csv&gid=")
-    if "/export" not in csv_url:
-        csv_url = url.split("/edit")[0] + "/export?format=csv"
-    
-    df = pd.read_csv(csv_url)
-    df.columns = df.columns.str.strip() # Limpia espacios en títulos
-    return df
+    try:
+        url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        # Cargamos directamente el CSV desde el link de publicación
+        df = pd.read_csv(url)
+        # Limpiamos nombres de columnas por si acaso
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception as e:
+        st.error(f"Error al conectar con el inventario: {e}")
+        return None
 
 # 3. Sistema de Login
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("🔐 Acceso al Sistema - Ferretería Universal")
+    st.title("🔐 Acceso - Ferretería Universal")
     user = st.text_input("Usuario")
     clave = st.text_input("Contraseña", type="password")
     if st.button("Entrar"):
@@ -32,32 +33,31 @@ if not st.session_state.autenticado:
             st.error("Credenciales incorrectas")
 else:
     # --- INTERFAZ PRINCIPAL ---
-    st.sidebar.title("🛠️ Menú Principal")
+    st.sidebar.title("🛠️ Menú")
     menu = st.sidebar.radio("Ir a:", ["Inventario", "Ventas", "Usuarios"])
 
-    # Carga de datos inicial
-    try:
-        df = cargar_datos()
-    except Exception as e:
-        st.error(f"Error de conexión: {e}")
-        st.stop()
+    df = cargar_datos()
 
-    if menu == "Inventario":
-        st.header("📦 Control de Inventario")
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        
-        with st.expander("➕ Agregar nuevo producto"):
-            st.info("Para agregar productos, por ahora edita directamente tu Google Sheet. Pronto añadiremos el botón de guardado automático.")
+    if df is not None:
+        if menu == "Inventario":
+            st.header("📦 Inventario en Tiempo Real")
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            st.info("💡 Para añadir o editar productos, hazlo en tu Google Sheet y los cambios se verán aquí al refrescar.")
 
-    elif menu == "Ventas":
-        st.header("🛒 Registrar Venta")
-        # Selector dinámico
-        productos = df['Nombre'].tolist()
-        seleccion = st.selectbox("Selecciona producto:", productos)
-        
-        if st.button(f"Registrar Venta de {seleccion}"):
-            st.warning("⚠️ Función de escritura en desarrollo. Por ahora, registra la venta y descuenta en tu Excel manualmente.")
-            st.write(f"Venta confirmada: 1 unidad de {seleccion}")
+        elif menu == "Ventas":
+            st.header("🛒 Registro de Ventas")
+            # Selector dinámico basado en tu Excel
+            if 'Nombre' in df.columns:
+                lista_prod = df['Nombre'].tolist()
+                seleccion = st.selectbox("Producto a vender:", lista_prod)
+                cantidad = st.number_input("Cantidad:", min_value=1, value=1)
+                
+                if st.button(f"Confirmar Venta de {seleccion}"):
+                    st.success(f"Venta registrada localmente: {cantidad} unidad(es) de {seleccion}")
+                    st.warning("Nota: Por ahora, descuenta el stock manualmente en tu Google Sheet.")
+            else:
+                st.error("No se encontró la columna 'Nombre' en el Excel.")
 
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state.autenticado = False
