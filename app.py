@@ -1,19 +1,27 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 # 1. Configuración de la App
 st.set_page_config(page_title="Ferretería Pro", layout="wide")
 
-# 2. Conexión a Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. Función para leer datos directamente (Más rápido y sin errores)
+def cargar_datos():
+    url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+    # Forzamos la lectura como CSV para evitar bloqueos de Google
+    csv_url = url.replace("/edit#gid=", "/export?format=csv&gid=")
+    if "/export" not in csv_url:
+        csv_url = url.split("/edit")[0] + "/export?format=csv"
+    
+    df = pd.read_csv(csv_url)
+    df.columns = df.columns.str.strip() # Limpia espacios en títulos
+    return df
 
-# 3. Login
+# 3. Sistema de Login
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("🔐 Acceso al Sistema")
+    st.title("🔐 Acceso al Sistema - Ferretería Universal")
     user = st.text_input("Usuario")
     clave = st.text_input("Contraseña", type="password")
     if st.button("Entrar"):
@@ -23,44 +31,33 @@ if not st.session_state.autenticado:
         else:
             st.error("Credenciales incorrectas")
 else:
-    st.sidebar.title("🛠️ Ferretería Universal")
-    menu = st.sidebar.radio("Menú", ["Inventario", "Ventas", "Usuarios"])
+    # --- INTERFAZ PRINCIPAL ---
+    st.sidebar.title("🛠️ Menú Principal")
+    menu = st.sidebar.radio("Ir a:", ["Inventario", "Ventas", "Usuarios"])
 
-    # Cargar datos de la hoja "Productos"
+    # Carga de datos inicial
     try:
-        df = conn.read(worksheet="Productos", usecols=["ID", "Nombre", "Precio", "Stock"]).dropna(how="all")
-    except:
-        st.error("No se pudo leer la hoja 'Productos'. Revisa el nombre de la pestaña en Google Sheets.")
+        df = cargar_datos()
+    except Exception as e:
+        st.error(f"Error de conexión: {e}")
         st.stop()
 
     if menu == "Inventario":
         st.header("📦 Control de Inventario")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
         
         with st.expander("➕ Agregar nuevo producto"):
-            with st.form("nuevo"):
-                nom = st.text_input("Nombre del Item")
-                pre = st.number_input("Precio", min_value=0.0)
-                sto = st.number_input("Stock", min_value=0)
-                if st.form_submit_button("Guardar en Nube"):
-                    new_row = pd.DataFrame([{"ID": len(df)+1, "Nombre": nom, "Precio": pre, "Stock": sto}])
-                    df_updated = pd.concat([df, new_row], ignore_index=True)
-                    conn.update(worksheet="Productos", data=df_updated)
-                    st.success("¡Producto Guardado!")
-                    st.rerun()
+            st.info("Para agregar productos, por ahora edita directamente tu Google Sheet. Pronto añadiremos el botón de guardado automático.")
 
     elif menu == "Ventas":
         st.header("🛒 Registrar Venta")
-        # Selector de producto dinámico desde tu lista real
-        prod_lista = df['Nombre'].tolist()
-        seleccion = st.selectbox("Selecciona producto para vender:", prod_lista)
+        # Selector dinámico
+        productos = df['Nombre'].tolist()
+        seleccion = st.selectbox("Selecciona producto:", productos)
         
-        if st.button(f"Vender 1 unidad de {seleccion}"):
-            # Lógica para descontar stock
-            df.loc[df['Nombre'] == seleccion, 'Stock'] -= 1
-            conn.update(worksheet="Productos", data=df)
-            st.success(f"Venta registrada: {seleccion} (-1)")
-            st.rerun()
+        if st.button(f"Registrar Venta de {seleccion}"):
+            st.warning("⚠️ Función de escritura en desarrollo. Por ahora, registra la venta y descuenta en tu Excel manualmente.")
+            st.write(f"Venta confirmada: 1 unidad de {seleccion}")
 
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state.autenticado = False
