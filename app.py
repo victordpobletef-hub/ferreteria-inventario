@@ -28,7 +28,7 @@ else:
 
     # Cargar datos de la hoja "Productos"
     try:
-        df = conn.read(worksheet="Productos", ttl=0) # ttl=0 para que no use caché y sea rápido
+        df = conn.read(worksheet="Productos", usecols=["ID", "Nombre", "Precio", "Stock"]).dropna(how="all")
     except:
         st.error("No se pudo leer la hoja 'Productos'. Revisa el nombre de la pestaña en Google Sheets.")
         st.stop()
