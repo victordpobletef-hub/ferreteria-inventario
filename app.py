@@ -34,6 +34,24 @@ def registrar_nuevo_usuario(user, clave, rol):
     except Exception as e:
         st.error(f"Error al guardar: {e}")
         return False
+        
+def validar_login(user, clave):
+    """Busca en el Excel si el usuario y clave existen"""
+    try:
+        df_usuarios = conn.read(worksheet="Usuarios")
+        # Buscamos coincidencia exacta de usuario y clave
+        # Convertimos a string para evitar errores con números
+        filtro = df_usuarios[(df_usuarios['Usuario'].astype(str) == str(user)) & 
+                             (df_usuarios['Clave'].astype(str) == str(clave))]
+        
+        if not filtro.empty:
+            # Guardamos el rol en la sesión para usarlo después
+            st.session_state.rol = filtro.iloc[0]['Rol']
+            return True
+        return False
+    except Exception as e:
+        st.error(f"Error al validar acceso: {e}")
+        return False
 
 # ==========================================
 # 3. COMPONENTES DE LA INTERFAZ (VISTAS)
@@ -78,20 +96,26 @@ if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    # Pantalla de Login
     st.title("🔐 Acceso - Ferretería Universal")
     user = st.text_input("Usuario")
     clave = st.text_input("Contraseña", type="password")
+    
     if st.button("Entrar"):
-        if user == "admin" and clave == "1234": # Aquí podrías usar una función para validar contra el Excel
+        if validar_login(user, clave):
             st.session_state.autenticado = True
+            st.session_state.usuario_actual = user
+            st.success(f"Bienvenido {user}")
             st.rerun()
         else:
-            st.error("Credenciales incorrectas")
+            st.error("Usuario o contraseña incorrectos")
 else:
     # App Principal
     st.sidebar.title("🛠️ Menú")
-    menu = st.sidebar.radio("Ir a:", ["Inventario", "Ventas", "Usuarios"])
+    opciones = ["Inventario", "Ventas"]
+    if st.session_state.get('rol') == "Admin":
+        opciones.append("Usuarios")
+        
+    menu = st.sidebar.radio("Ir a:", opciones)
     
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state.autenticado = False
