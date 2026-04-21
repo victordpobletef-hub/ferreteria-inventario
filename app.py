@@ -79,7 +79,7 @@ def vista_usuarios():
     with st.form("form_registro"):
         u = st.text_input("Nombre de usuario")
         p = st.text_input("Contraseña", type="password")
-        r = st.selectbox("Rol", ["Vendedor", "Admin"])
+        r = st.selectbox("Rol", ["Vendedor","Supervisor", "Admin","Observador"])
         if st.form_submit_button("Registrar Usuario"):
             if u and p:
                 if registrar_nuevo_usuario(u, p, r):
