@@ -79,7 +79,7 @@ def vista_usuarios():
     with st.form("form_registro"):
         u = st.text_input("Nombre de usuario")
         p = st.text_input("Contraseña", type="password")
-        r = st.selectbox("Rol", ["Vendedor","Supervisor", "Admin","Observador"])
+        r = st.selectbox("Rol", ["Vendedor","Supervisor", "Administrador","Observador"])
         if st.form_submit_button("Registrar Usuario"):
             if u and p:
                 if registrar_nuevo_usuario(u, p, r):
@@ -112,7 +112,7 @@ else:
     # App Principal
     st.sidebar.title("🛠️ Menú")
     opciones = ["Inventario", "Ventas"]
-    if st.session_state.get('rol') == "Admin":
+    if st.session_state.get('rol') == "Administrador":
         opciones.append("Usuarios")
         
     menu = st.sidebar.radio("Ir a:", opciones)
