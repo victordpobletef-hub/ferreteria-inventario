@@ -23,18 +23,6 @@ def cargar_inventario():
     except Exception as e:
         st.error(f"Error cargando inventario: {e}")
         return None
-
-def registrar_nuevo_usuario(user, clave, rol):
-    """Guarda un usuario en la pestaña Usuarios"""
-    try:
-        df_actual = conn.read(worksheet="Usuarios")
-        nueva_fila = pd.DataFrame([{"Usuario": user, "Clave": clave, "Rol": rol}])
-        df_final = pd.concat([df_actual, nueva_fila], ignore_index=True)
-        conn.update(worksheet="Usuarios", data=df_final)
-        return True
-    except Exception as e:
-        st.error(f"Error al guardar: {e}")
-        return False
         
 def validar_login(user, clave):
     """Busca en el Excel si el usuario y clave existen"""
@@ -75,19 +63,6 @@ def vista_ventas(df):
     else:
         st.error("No se encontró la columna 'Nombre'.")
 
-def vista_usuarios():
-    st.header("👤 Gestión de Usuarios")
-    with st.form("form_registro"):
-        u = st.text_input("Nombre de usuario")
-        p = st.text_input("Contraseña", type="password")
-        r = st.selectbox("Rol", ["Vendedor","Supervisor", "Administrador","Observador"])
-        if st.form_submit_button("Registrar Usuario"):
-            if u and p:
-                if registrar_nuevo_usuario(u, p, r):
-                    st.success(f"¡Usuario {u} creado!")
-                    st.balloons()
-            else:
-                st.warning("Completa todos los campos.")
 
 # ==========================================
 # 4. FLUJO PRINCIPAL (EL CONTROLADOR)
