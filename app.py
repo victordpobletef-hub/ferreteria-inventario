@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
+import usuarios
 
 # ==========================================
 # 1. CONFIGURACIÓN Y CONEXIÓN
@@ -129,4 +130,5 @@ else:
         elif menu == "Ventas":
             vista_ventas(datos_inv)
         elif menu == "Usuarios":
-            vista_usuarios()
+            # Llamamos a la función que está en el otro archivo
+            usuarios.vista_usuarios(conn) 
