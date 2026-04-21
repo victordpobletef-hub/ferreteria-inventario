@@ -1,68 +1,56 @@
 import streamlit as st
 import pandas as pd
 
-def registrar_nuevo_usuario(conn, user, clave, rol):
+# --- FUNCIONES DE LÓGICA ---
+
+def actualizar_usuario(conn, usuario_nombre, nueva_clave, nuevo_rol):
     try:
-        df_actual = conn.read(worksheet="Usuarios", ttl=0)
-        nueva_fila = pd.DataFrame([{"Usuario": user, "Clave": clave, "Rol": rol}])
-        df_final = pd.concat([df_actual, nueva_fila], ignore_index=True)
-        conn.update(worksheet="Usuarios", data=df_final)
+        df = conn.read(worksheet="Usuarios", ttl=0)
+        # Buscamos la fila y actualizamos los valores
+        df.loc[df['Usuario'] == usuario_nombre, ['Clave', 'Rol']] = [nueva_clave, nuevo_rol]
+        conn.update(worksheet="Usuarios", data=df)
         return True
     except Exception as e:
-        st.error(f"Error al guardar: {e}")
+        st.error(f"Error al actualizar: {e}")
         return False
 
-def borrar_usuario(conn, usuario_a_borrar):
-    try:
-        df_actual = conn.read(worksheet="Usuarios", ttl=0)
-        # Filtramos: dejamos todos menos el que queremos borrar
-        df_final = df_actual[df_actual['Usuario'] != usuario_a_borrar]
-        
-        if len(df_actual) == len(df_final):
-            st.error("No se encontró el usuario.")
-            return False
-            
-        conn.update(worksheet="Usuarios", data=df_final)
-        return True
-    except Exception as e:
-        st.error(f"Error al borrar: {e}")
-        return False
+# ... (Mantén aquí tus funciones registrar_nuevo_usuario y borrar_usuario) ...
 
 def vista_usuarios(conn):
-    st.header("👤 Gestión de Usuarios y Roles")
+    st.header("👤 Panel de Control de Personal")
     
-    # --- Pestañas para organizar ---
-    tab1, tab2 = st.tabs(["➕ Registrar Nuevo", "🗑️ Eliminar Usuario"])
+    # Leemos los datos una sola vez para todas las pestañas
+    df_usuarios = conn.read(worksheet="Usuarios", ttl=0)
+    
+    tab1, tab2, tab3 = st.tabs(["➕ Registrar", "📝 Editar", "🗑️ Eliminar"])
 
     with tab1:
-        with st.form("form_registro"):
-            u = st.text_input("Nombre de usuario")
-            p = st.text_input("Contraseña", type="password")
-            r = st.selectbox("Rol", ["Vendedor", "Supervisor", "Administrador", "Observador"])
-            if st.form_submit_button("Registrar Usuario"):
-                if u and p:
-                    if registrar_nuevo_usuario(conn, u, p, r):
-                        st.success(f"¡Usuario {u} creado!")
-                        st.rerun()
-                else:
-                    st.warning("Completa todos los campos.")
+        # ... (Tu código de registro que ya funciona) ...
+        pass
 
     with tab2:
-        df_usuarios = conn.read(worksheet="Usuarios", ttl=0)
-        lista_usuarios = df_usuarios['Usuario'].tolist()
+        st.subheader("Modificar datos de usuario")
+        lista_u = df_usuarios['Usuario'].tolist()
+        u_selec = st.selectbox("Selecciona usuario a editar:", lista_u, key="edit_select")
         
-        # Evitar que el admin se borre a sí mismo por accidente
-        if st.session_state.usuario_actual in lista_usuarios:
-            lista_usuarios.remove(st.session_state.usuario_actual)
-
-        u_borrar = st.selectbox("Selecciona usuario a eliminar:", lista_usuarios)
+        # Obtenemos datos actuales del usuario seleccionado para rellenar el formulario
+        datos_usuario = df_usuarios[df_usuarios['Usuario'] == u_selec].iloc[0]
         
-        if st.button("Confirmar Eliminación", type="primary"):
-            if borrar_usuario(conn, u_borrar):
-                st.success(f"Usuario {u_borrar} eliminado correctamente.")
-                st.rerun()
+        with st.form("form_editar"):
+            nueva_p = st.text_input("Nueva Contraseña", value=str(datos_usuario['Clave']))
+            nuevo_r = st.selectbox("Cambiar Rol", 
+                                  ["Vendedor", "Supervisor", "Administrador", "Observador"],
+                                  index=["Vendedor", "Supervisor", "Administrador", "Observador"].index(datos_usuario['Rol']))
+            
+            if st.form_submit_button("Guardar Cambios"):
+                if actualizar_usuario(conn, u_selec, nueva_p, nuevo_r):
+                    st.success(f"Usuario {u_selec} actualizado.")
+                    st.rerun()
 
-    # Mostrar lista abajo
+    with tab3:
+        # ... (Tu código de borrar que ya funciona) ...
+        pass
+
+    # Mostrar lista general al final
     st.divider()
-    st.subheader("📋 Usuarios actuales")
     st.dataframe(df_usuarios[['Usuario', 'Rol']], use_container_width=True, hide_index=True)
