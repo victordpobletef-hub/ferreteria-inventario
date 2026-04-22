@@ -14,11 +14,16 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # ==========================================
 
 def cargar_inventario():
-    """Trae los datos de la pestaña Inventario"""
+    """Trae los datos de la pestaña Inventario (Actualizado con 6 columnas)"""
     try:
-        df = conn.read(worksheet="Inventario")
-        df = df.iloc[:, :4] 
-        df.columns = ['ID', 'Nombre', 'Precio', 'Stock']
+        # Leemos la hoja completa
+        df = conn.read(worksheet="Inventario", ttl=0)
+        
+        # Seleccionamos las 6 columnas según tu imagen
+        # ID, Nombre, Precio, Costo, Stock, Codigo Barra
+        df = df.iloc[:, :6] 
+        df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra']
+        
         return df.dropna(subset=['Nombre'])
     except Exception as e:
         st.error(f"Error cargando inventario: {e}")
