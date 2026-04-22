@@ -92,4 +92,14 @@ def vista_admin_inventario(conn):
                 st.rerun()
 
     st.divider()
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.subheader("📋 Estado Actual del Inventario")
+    st.dataframe(
+        df.style.format({
+            "Precio": "${:,.0f}",
+            "Costo": "${:,.0f}",
+            "Ganancia": "${:,.0f}",
+            "Stock": "{:,.0f}"
+        }), 
+        use_container_width=True, 
+        hide_index=True
+    )
