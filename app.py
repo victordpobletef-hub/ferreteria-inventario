@@ -14,15 +14,19 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # ==========================================
 
 def cargar_inventario():
-    """Trae los datos de la pestaña Inventario (Actualizado con 6 columnas)"""
     try:
-        # Leemos la hoja completa
         df = conn.read(worksheet="Inventario", ttl=0)
-        
-        # Seleccionamos las 6 columnas según tu imagen
-        # ID, Nombre, Precio, Costo, Stock, Codigo Barra
         df = df.iloc[:, :6] 
         df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra']
+        
+        # --- LIMPIEZA DE DECIMALES ---
+        # Llenamos vacíos con 0 para que no de error al convertir
+        df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
+        df['Stock'] = pd.to_numeric(df['Stock'], errors='coerce').fillna(0).astype(int)
+        
+        # El Código de Barra es mejor tratarlo como TEXTO (String) 
+        # para que no aparezcan puntos ni se acorte si es muy largo
+        df['Codigo Barra'] = df['Codigo Barra'].astype(str).replace(r'\.0$', '', regex=True)
         
         return df.dropna(subset=['Nombre'])
     except Exception as e:
