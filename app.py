@@ -122,11 +122,13 @@ else:
 
     datos_inv = cargar_inventario()
 
-    if menu == "Inventario":
-        vista_inventario(datos_inv)
+    # Lógica de navegación simplificada
+    if menu == "Gestión Inventario":
+        inventario_admin.vista_admin_inventario(conn)
     elif menu == "Ventas":
+    # Aquí cargamos los datos antes de pasar a la vista de ventas
+    datos_inv = cargar_inventario() 
+    if datos_inv is not None:
         vista_ventas(datos_inv)
-    elif menu == "Gestión Inventario":
-        inventario_admin.vista_admin_inventario(conn) # Llamada al nuevo archivo
     elif menu == "Usuarios":
         usuarios.vista_usuarios(conn)
