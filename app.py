@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import usuarios
+import inventario_admin 
 
 # ==========================================
 # 1. CONFIGURACIÓN Y CONEXIÓN
@@ -100,6 +101,8 @@ else:
     # App Principal
     st.sidebar.title("🛠️ Menú")
     opciones = ["Inventario", "Ventas"]
+    if st.session_state.get('rol') in ["Administrador", "Supervisor"]:
+        opciones.append("Gestión Inventario") # Nuevo botón
     if st.session_state.get('rol') == "Administrador":
         opciones.append("Usuarios")
         
@@ -111,11 +114,11 @@ else:
 
     datos_inv = cargar_inventario()
 
-    if datos_inv is not None:
-        if menu == "Inventario":
-            vista_inventario(datos_inv)
-        elif menu == "Ventas":
-            vista_ventas(datos_inv)
-        elif menu == "Usuarios":
-            # Llamamos a la función que está en el otro archivo
-            usuarios.vista_usuarios(conn) 
+    if menu == "Inventario":
+        vista_inventario(datos_inv)
+    elif menu == "Ventas":
+        vista_ventas(datos_inv)
+    elif menu == "Gestión Inventario":
+        inventario_admin.vista_admin_inventario(conn) # Llamada al nuevo archivo
+    elif menu == "Usuarios":
+        usuarios.vista_usuarios(conn)
