@@ -4,36 +4,50 @@ import pandas as pd
 def vista_admin_inventario(conn):
     st.header("🛠️ Gestión de Productos")
     
-    # Cargar datos actuales
+    # 1. Cargar datos (Esto ya lo tenías)
     df = conn.read(worksheet="Inventario", ttl=0)
-    df = df.iloc[:, :6]
-    df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra']
-    
+    # ... (tus líneas de limpieza de columnas aquí) ...
+
     tab1, tab2, tab3 = st.tabs(["➕ Añadir Producto", "📝 Modificar", "🗑️ Eliminar"])
 
-    # --- TAB 1: AÑADIR ---
+    # --- AQUÍ PEGAS EL NUEVO CÓDIGO ---
     with tab1:
-        with st.form("form_nuevo_prod"):
+        st.subheader("🆕 Ingresar Nuevo Producto")
+        
+        # Cálculo automático del ID
+        if not df.empty:
+            nuevo_id = int(df['ID'].max()) + 1
+        else:
+            nuevo_id = 1
+        
+        st.info(f"Asignando automáticamente el **ID: {nuevo_id}**")
+
+        with st.form("form_nuevo_prod", clear_on_submit=True):
+            nuevo_nombre = st.text_input("Nombre del Producto *")
+            
             col1, col2 = st.columns(2)
-            nuevo_id = col1.number_input("ID", min_value=1, value=int(df['ID'].max() + 1) if not df.empty else 1)
-            nuevo_nombre = col2.text_input("Nombre del Producto")
+            p_venta = col1.number_input("Precio Venta *", min_value=0, value=0)
+            p_costo = col2.number_input("Precio Costo *", min_value=0, value=0)
             
-            p_venta = col1.number_input("Precio Venta", min_value=0, value=0)
-            p_costo = col2.number_input("Precio Costo", min_value=0, value=0)
+            stock_ini = col1.number_input("Stock Inicial *", min_value=0, value=0)
+            c_barra = col2.text_input("Código de Barra (Opcional)")
             
-            stock_ini = col1.number_input("Stock Inicial", min_value=0, value=0)
-            c_barra = col2.text_input("Código de Barra")
-            
-            if st.form_submit_button("Guardar Nuevo Producto"):
-                if nuevo_nombre:
-                    nueva_fila = pd.DataFrame([[nuevo_id, nuevo_nombre, p_venta, p_costo, stock_ini, c_barra]], 
+            submit = st.form_submit_button("Guardar en Inventario")
+
+            if submit:
+                # Validación estricta
+                if not nuevo_nombre:
+                    st.error("❌ El nombre del producto es obligatorio.")
+                elif p_venta <= 0 or p_costo <= 0:
+                    st.error("❌ Los precios deben ser mayores a 0.")
+                else:
+                    # Guardado
+                    nueva_fila = pd.DataFrame([[nuevo_id, nuevo_nombre.strip(), p_venta, p_costo, stock_ini, c_barra.strip()]], 
                                              columns=df.columns)
                     df_final = pd.concat([df, nueva_fila], ignore_index=True)
                     conn.update(worksheet="Inventario", data=df_final)
-                    st.success(f"Producto '{nuevo_nombre}' añadido.")
+                    st.success(f"✅ ¡{nuevo_nombre} guardado!")
                     st.rerun()
-                else:
-                    st.warning("El nombre es obligatorio.")
 
     # --- TAB 2: MODIFICAR ---
     with tab2:
