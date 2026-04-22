@@ -69,10 +69,27 @@ def vista_admin_inventario(conn):
                 
                 new_cb = st.text_input("Código Barra", value=str(datos['Codigo Barra']))
                 
-                if st.form_submit_button("Actualizar"):
-                    df.loc[idx, ['Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra', 'Grupo', 'Material', 'Granel']] = [new_n, new_pv, new_pc, new_st, new_cb, new_g, new_m, new_gr]
+                 if st.form_submit_button("Actualizar"):
+                    # 1. Aseguramos que las columnas de texto acepten cualquier texto
+                    columnas_texto = ['Nombre', 'Codigo Barra', 'Grupo', 'Material', 'Granel']
+                    for col in columnas_texto:
+                        df[col] = df[col].astype(object)
+                    
+                    # 2. Realizamos la actualización
+                    df.loc[idx, ['Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra', 'Grupo', 'Material', 'Granel']] = [
+                        str(new_n), 
+                        float(new_pv), 
+                        float(new_pc), 
+                        int(new_st), 
+                        str(new_cb), 
+                        str(new_g), 
+                        str(new_m), 
+                        str(new_gr)
+                    ]
+                    
+                    # 3. Subimos al Excel
                     conn.update(worksheet="Inventario", data=df)
-                    st.success("✅ Actualizado.")
+                    st.success("✅ Producto actualizado correctamente.")
                     st.rerun()
 
     # --- TAB 3: ELIMINAR ---
