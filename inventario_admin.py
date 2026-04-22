@@ -22,32 +22,45 @@ def vista_admin_inventario(conn):
         
         st.info(f"Asignando automáticamente el **ID: {nuevo_id}**")
 
-        with st.form("form_nuevo_prod", clear_on_submit=True):
-            nuevo_nombre = st.text_input("Nombre del Producto *")
-            
-            col1, col2 = st.columns(2)
-            p_venta = col1.number_input("Precio Venta *", min_value=0, value=0)
-            p_costo = col2.number_input("Precio Costo *", min_value=0, value=0)
-            
-            stock_ini = col1.number_input("Stock Inicial *", min_value=0, value=0)
-            c_barra = col2.text_input("Código de Barra (Opcional)")
-            
-            submit = st.form_submit_button("Guardar en Inventario")
+       with st.form("form_nuevo_prod", clear_on_submit=True):
+        nuevo_nombre = st.text_input("Nombre del Producto *")
+    
+        col1, col2, col3 = st.columns(3)
+        p_venta = col1.number_input("Precio Venta *", min_value=0)
+        p_costo = col2.number_input("Precio Costo *", min_value=0)
+        stock_ini = col3.number_input("Stock Inicial *", min_value=0)
+    
+        # Nuevos desplegables con tus valores exactos
+        col_a, col_b, col_c = st.columns(3)
+    
+        nuevo_grupo = col_a.selectbox("Grupo", [
+            "Clavos y Anclajes", "Electrico", "Fiting", "Herrajes", 
+            "Herramientas", "Hogar", "Jardinería", "Pintura", 
+            "Químicos", "Seguridad", "Tornillería"
+        ])
+    
+        nuevo_mat = col_b.selectbox("Material", [
+            "ARIDO", "BRONCE", "COBRE", "MADERA", "METAL", 
+            "OTRO", "PLASTICO", "PVC", "QUIMICO", "SILICONA"
+        ])
+    
+        nuevo_granel = col_c.selectbox("Granel", ["No", "Si"])
+    
+        c_barra = st.text_input("Código de Barra (Opcional)")
+    
+        submit = st.form_submit_button("Guardar en Inventario")
 
-            if submit:
-                # Validación estricta
-                if not nuevo_nombre:
-                    st.error("❌ El nombre del producto es obligatorio.")
-                elif p_venta <= 0 or p_costo <= 0:
-                    st.error("❌ Los precios deben ser mayores a 0.")
-                else:
-                    # Guardado
-                    nueva_fila = pd.DataFrame([[nuevo_id, nuevo_nombre.strip(), p_venta, p_costo, stock_ini, c_barra.strip()]], 
-                                             columns=df.columns)
-                    df_final = pd.concat([df, nueva_fila], ignore_index=True)
-                    conn.update(worksheet="Inventario", data=df_final)
-                    st.success(f"✅ ¡{nuevo_nombre} guardado!")
-                    st.rerun()
+    if submit:
+        if nuevo_nombre and p_venta > 0:
+            nueva_fila = pd.DataFrame([[
+                nuevo_id, nuevo_nombre, p_venta, p_costo, stock_ini, 
+                c_barra, nuevo_grupo, nuevo_mat, nuevo_granel
+            ]], columns=df.columns)
+            
+            df_final = pd.concat([df, nueva_fila], ignore_index=True)
+            conn.update(worksheet="Inventario", data=df_final)
+            st.success(f"✅ {nuevo_nombre} guardado correctamente.")
+            st.rerun()
 
     # --- TAB 2: MODIFICAR ---
     with tab2:
