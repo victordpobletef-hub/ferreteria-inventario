@@ -38,8 +38,12 @@ def vista_admin_inventario(conn):
             
             if st.form_submit_button("Guardar en Inventario"):
                 if nombre and p_venta > 0:
-                    nueva_fila = pd.DataFrame([[nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini, str(c_barra), grupo, material, granel]], 
-                                             columns=df.columns)
+                    # Calculamos la ganancia antes de guardar
+                    ganancia_nueva = (p_venta / 1.19) - (p_venta * 0.038) - p_costo
+
+                    nueva_fila = pd.DataFrame([[nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini, 
+                    c_barra, grupo, material, granel, ganancia_nueva]], columns=df.columns)
+
                     df_final = pd.concat([df, nueva_fila], ignore_index=True)
                     conn.update(worksheet="Inventario", data=df_final)
                     st.success("✅ Producto añadido.")
