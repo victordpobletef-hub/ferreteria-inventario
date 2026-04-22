@@ -91,14 +91,17 @@ def vista_admin_inventario(conn):
                 st.success("✅ Eliminado.")
                 st.rerun()
 
+    # Resumen visual con formatos corregidos
     st.divider()
     st.subheader("📋 Estado Actual del Inventario")
     st.dataframe(
         df.style.format({
-            "Precio": "${:,.0f}",
-            "Costo": "${:,.0f}",
-            "Ganancia": "${:,.0f}",
-            "Stock": "{:,.0f}"
+            "ID": "{:.0f}",           # Esto quita todos los decimales del ID
+            "Precio": "${:,.0f}",     # Moneda sin decimales
+            "Costo": "${:,.0f}",      # Moneda sin decimales
+            "Stock": "{:.0f}",        # Stock como entero
+            "Ganancia": "${:,.0f}",   # Ganancia como moneda sin decimales
+            "Codigo Barra": lambda x: "" if str(x).lower() == "none" else str(x).split('.')[0]
         }), 
         use_container_width=True, 
         hide_index=True
