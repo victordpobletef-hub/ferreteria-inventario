@@ -104,12 +104,16 @@ if not st.session_state.autenticado:
 else:
     # App Principal
     st.sidebar.title("🛠️ Menú")
-    opciones = ["Inventario", "Ventas"]
+
+    # Definimos opciones según el Rol
     if st.session_state.get('rol') in ["Administrador", "Supervisor"]:
-        opciones.append("Gestión Inventario") # Nuevo botón
+        opciones = ["Gestión Inventario", "Ventas"] # Moví Gestión al principio
+    else:
+        opciones = ["Ventas"] # Un vendedor solo necesita vender
+
     if st.session_state.get('rol') == "Administrador":
         opciones.append("Usuarios")
-        
+
     menu = st.sidebar.radio("Ir a:", opciones)
     
     if st.sidebar.button("Cerrar Sesión"):
