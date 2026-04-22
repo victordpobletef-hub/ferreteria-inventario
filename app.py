@@ -17,14 +17,20 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def cargar_inventario():
     try:
         df = conn.read(worksheet="Inventario", ttl=0)
-        df = df.iloc[:, :9] 
-        # Nombres exactos de tus nuevas columnas
-        df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra', 'Grupo', 'Material', 'Granel']
+        df = df.iloc[:, :10] # Ahora leemos 10 columnas
+        df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra', 'Grupo', 'Material', 'Granel', 'Ganancia']
         
-        # Limpieza de números
+        # --- CÁLCULO AUTOMÁTICO DE GANANCIA ---
+        # Convertimos a números por seguridad
+        p = pd.to_numeric(df['Precio'], errors='coerce').fillna(0)
+        c = pd.to_numeric(df['Costo'], errors='coerce').fillna(0)
+        
+        # Aplicamos tu fórmula: (Precio / 1.19) - (Precio * 0.038) - Costo
+        df['Ganancia'] = (p / 1.19) - (p * 0.038) - c
+        
+        # Limpieza de ID y Stock
         df['ID'] = pd.to_numeric(df['ID'], errors='coerce').fillna(0).astype(int)
         df['Stock'] = pd.to_numeric(df['Stock'], errors='coerce').fillna(0).astype(int)
-        df['Codigo Barra'] = df['Codigo Barra'].astype(str).replace(r'\.0$', '', regex=True)
         
         return df.dropna(subset=['Nombre'])
     except Exception as e:
