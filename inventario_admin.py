@@ -40,7 +40,6 @@ def vista_admin_inventario(conn):
                 if nombre and p_venta > 0:
                     # Calculamos la ganancia antes de guardar
                     ganancia_nueva = (p_venta / 1.19) - (p_venta * 0.038) - p_costo
-
                     nueva_fila = pd.DataFrame([[nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini, 
                     c_barra, grupo, material, granel, ganancia_nueva]], columns=df.columns)
 
@@ -93,6 +92,8 @@ def vista_admin_inventario(conn):
                     df.at[idx, 'Grupo'] = str(new_g)
                     df.at[idx, 'Material'] = str(new_m)
                     df.at[idx, 'Granel'] = str(new_gr)
+                    new_gan = (float(new_pv) / 1.19) - (float(new_pv) * 0.038) - float(new_pc)
+                    df.at[idx, 'Ganancia'] = new_gan
                     
                     conn.update(worksheet="Inventario", data=df)
                     st.success("✅ Producto actualizado correctamente.")
