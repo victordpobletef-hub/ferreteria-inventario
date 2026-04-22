@@ -64,8 +64,9 @@ def vista_inventario(df):
     # Mostramos todo pero formateamos los precios
     st.dataframe(df.style.format({
         "Precio": "${:,.0f}",
-        "Costo": "${:,.0f}"
-    }), use_container_width=True, hide_index=True)
+        "Costo": "${:,.0f}",
+        "Ganancia": "${:,.0f}" # Sin decimales para que sea más claro
+        }), use_container_width=True, hide_index=True)
 
 def vista_ventas(df):
     st.header("🛒 Registro de Ventas")
