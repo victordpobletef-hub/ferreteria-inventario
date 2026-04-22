@@ -52,9 +52,12 @@ def validar_login(user, clave):
 # ==========================================
 
 def vista_inventario(df):
-    st.header("📦 Inventario en Tiempo Real")
-    st.dataframe(df, use_container_width=True, hide_index=True)
-    st.info("💡 Los cambios en Google Sheets se reflejan al recargar.")
+    st.header("📦 Inventario Completo")
+    # Mostramos todo pero formateamos los precios
+    st.dataframe(df.style.format({
+        "Precio": "${:,.0f}",
+        "Costo": "${:,.0f}"
+    }), use_container_width=True, hide_index=True)
 
 def vista_ventas(df):
     st.header("🛒 Registro de Ventas")
