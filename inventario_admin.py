@@ -22,14 +22,15 @@ def vista_admin_inventario(conn):
         nuevo_id = int(df['ID'].max() + 1) if not df.empty else 1
 
         # --- PRECIO COSTO fuera del form → actualiza en tiempo real ---
-        factor = (1 / 1.19) - 0.038
         p_costo_live = st.number_input(
             "Precio Costo *",
             min_value=0,
             key="costo_live",
             help="Ingresa el costo y el precio de venta se calculará automáticamente"
         )
-        precio_sugerido = round((p_costo_live * 1.30) / factor) if p_costo_live > 0 else 0
+        # p_venta = costo / (1/1.19 - 0.038 - 0.30)
+        factor = (1 / 1.19) - 0.038 - 0.30
+        precio_sugerido = round(p_costo_live / factor) if p_costo_live > 0 else 0
 
         if precio_sugerido > 0:
             st.success(f"💡 Precio de venta sugerido con 30% de ganancia: **${precio_sugerido:,.0f}**")
