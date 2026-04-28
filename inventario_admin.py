@@ -21,26 +21,31 @@ def vista_admin_inventario(conn):
     with st.expander("➕ Añadir Nuevo Producto", expanded=True):
         nuevo_id = int(df['ID'].max() + 1) if not df.empty else 1
 
-        # Leemos el costo desde session_state (se actualiza al cambiar el campo dentro del form)
-        # ganancia = (p_venta/1.19) - (p_venta*0.038) - costo = costo * 0.30
-        # despejando: p_venta = (costo * 1.30) / (1/1.19 - 0.038)
+        # --- PRECIO COSTO fuera del form → actualiza en tiempo real ---
         factor = (1 / 1.19) - 0.038
-        costo_actual = st.session_state.get("costo_input", 0)
-        precio_sugerido = round((costo_actual * 1.30) / factor) if costo_actual > 0 else 0
+        p_costo_live = st.number_input(
+            "Precio Costo *",
+            min_value=0,
+            key="costo_live",
+            help="Ingresa el costo y el precio de venta se calculará automáticamente"
+        )
+        precio_sugerido = round((p_costo_live * 1.30) / factor) if p_costo_live > 0 else 0
 
         if precio_sugerido > 0:
-            st.info(f"💡 Precio de venta sugerido (30% ganancia): **${precio_sugerido:,.0f}**")
+            st.success(f"💡 Precio de venta sugerido con 30% de ganancia: **${precio_sugerido:,.0f}**")
 
+        # --- Resto del formulario ---
         with st.form("form_nuevo_prod", clear_on_submit=True):
             nombre = st.text_input("Nombre del Producto *")
-            c1, c2, c3 = st.columns(3)
-            p_costo = c1.number_input("Precio Costo *", min_value=0, key="costo_input")
-            p_venta = c2.number_input(
-                f"Precio Venta * (sugerido: ${precio_sugerido:,})" if precio_sugerido > 0 else "Precio Venta *",
+
+            col_v, col_s = st.columns(2)
+            p_venta = col_v.number_input(
+                "Precio Venta *",
                 min_value=0,
-                value=precio_sugerido
+                value=precio_sugerido,
+                help="Puedes modificar el precio sugerido"
             )
-            stock_ini = c3.number_input("Stock Inicial *", min_value=0)
+            stock_ini = col_s.number_input("Stock Inicial *", min_value=0)
 
             ca, cb, cc = st.columns(3)
             grupo = ca.selectbox("Grupo", ["Clavos y Anclajes", "Electrico", "Fiting", "Herrajes",
@@ -51,11 +56,12 @@ def vista_admin_inventario(conn):
             granel = cc.selectbox("Granel", ["No", "Si"])
             c_barra = st.text_input("Código de Barra (Opcional)")
 
-            if st.form_submit_button("Guardar en Inventario"):
-                if nombre and p_venta > 0:
-                    ganancia_n = (p_venta / 1.19) - (p_venta * 0.038) - p_costo
+            if st.form_submit_button("Guardar en Inventario", type="primary"):
+                p_costo_final = st.session_state.get("costo_live", 0)
+                if nombre and p_venta > 0 and p_costo_final > 0:
+                    ganancia_n = (p_venta / 1.19) - (p_venta * 0.038) - p_costo_final
                     nueva_fila = pd.DataFrame([[
-                        nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini,
+                        nuevo_id, nombre.strip(), p_venta, p_costo_final, stock_ini,
                         str(c_barra), grupo, material, granel, ganancia_n
                     ]], columns=df.columns)
                     df_final = pd.concat([df, nueva_fila], ignore_index=True)
@@ -63,7 +69,7 @@ def vista_admin_inventario(conn):
                     st.success("✅ Producto añadido correctamente.")
                     st.rerun()
                 else:
-                    st.error("❌ Nombre y Precio son obligatorios.")
+                    st.error("❌ Nombre, Precio Costo y Precio Venta son obligatorios.")
 
     # ==========================================
     # 3. FORMULARIO DE EDICIÓN (se activa al pulsar ✏️)
