@@ -21,14 +21,12 @@ def vista_admin_inventario(conn):
     with st.expander("➕ Añadir Nuevo Producto", expanded=True):
         nuevo_id = int(df['ID'].max() + 1) if not df.empty else 1
 
-        # Precio sugerido fuera del form para que se actualice en tiempo real
-        p_costo_prev = st.number_input("Precio Costo *", min_value=0, key="costo_preview")
-
-        # Calcular precio sugerido con 30% de ganancia según la fórmula del sistema
+        # Leemos el costo desde session_state (se actualiza al cambiar el campo dentro del form)
         # ganancia = (p_venta/1.19) - (p_venta*0.038) - costo = costo * 0.30
-        # p_venta * (1/1.19 - 0.038) = costo * 1.30
+        # despejando: p_venta = (costo * 1.30) / (1/1.19 - 0.038)
         factor = (1 / 1.19) - 0.038
-        precio_sugerido = round((p_costo_prev * 1.30) / factor) if p_costo_prev > 0 else 0
+        costo_actual = st.session_state.get("costo_input", 0)
+        precio_sugerido = round((costo_actual * 1.30) / factor) if costo_actual > 0 else 0
 
         if precio_sugerido > 0:
             st.info(f"💡 Precio de venta sugerido (30% ganancia): **${precio_sugerido:,.0f}**")
@@ -36,7 +34,7 @@ def vista_admin_inventario(conn):
         with st.form("form_nuevo_prod", clear_on_submit=True):
             nombre = st.text_input("Nombre del Producto *")
             c1, c2, c3 = st.columns(3)
-            p_costo = c1.number_input("Precio Costo *", min_value=0, value=p_costo_prev)
+            p_costo = c1.number_input("Precio Costo *", min_value=0, key="costo_input")
             p_venta = c2.number_input(
                 f"Precio Venta * (sugerido: ${precio_sugerido:,})" if precio_sugerido > 0 else "Precio Venta *",
                 min_value=0,
@@ -80,8 +78,8 @@ def vista_admin_inventario(conn):
             with st.form("form_editar_inline"):
                 n_n = st.text_input("Nombre", value=str(datos['Nombre']))
                 col_v, col_c, col_s = st.columns(3)
-                n_pv = col_v.number_input("Precio Venta", value=int(datos['Precio']))
-                n_pc = col_c.number_input("Precio Costo", value=int(datos['Costo']))
+                n_pc = col_v.number_input("Precio Costo", value=int(datos['Costo']))
+                n_pv = col_c.number_input("Precio Venta", value=int(datos['Precio']))
                 n_st = col_s.number_input("Stock", value=int(datos['Stock']))
 
                 ca2, cb2, cc2 = st.columns(3)
@@ -132,7 +130,6 @@ def vista_admin_inventario(conn):
     if df.empty:
         st.info("No hay productos en el inventario.")
     else:
-        # Cabecera
         cols_header = st.columns([0.5, 2.5, 1, 1, 0.8, 1.5, 1.2, 1.2, 0.8, 1, 0.6, 0.6])
         headers = ["ID", "Nombre", "Precio", "Costo", "Stock",
                    "Cód. Barra", "Grupo", "Material", "Granel", "Ganancia", "✏️", "🗑️"]
@@ -141,7 +138,6 @@ def vista_admin_inventario(conn):
 
         st.divider()
 
-        # Inicializar estado de confirmación de borrado
         if 'confirmar_borrar_id' not in st.session_state:
             st.session_state.confirmar_borrar_id = None
 
@@ -161,18 +157,15 @@ def vista_admin_inventario(conn):
             cols[8].write(row['Granel'])
             cols[9].write(f"${int(row['Ganancia']):,}")
 
-            # Botón editar
             if cols[10].button("✏️", key=f"edit_{pid}"):
                 st.session_state.editar_id = pid
                 st.session_state.confirmar_borrar_id = None
                 st.rerun()
 
-            # Botón eliminar (con confirmación)
             if cols[11].button("🗑️", key=f"del_{pid}"):
                 st.session_state.confirmar_borrar_id = pid
                 st.session_state.editar_id = None
 
-            # Confirmación de borrado inline
             if st.session_state.confirmar_borrar_id == pid:
                 with st.container():
                     st.warning(f"¿Seguro que quieres eliminar **{row['Nombre']}**?")
