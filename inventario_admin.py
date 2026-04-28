@@ -31,6 +31,7 @@ def vista_admin_inventario(conn):
         # p_venta = costo / (1/1.19 - 0.038 - 0.30)
         factor = (1 / 1.19) - 0.038 - 0.30
         precio_sugerido = round(p_costo_live / factor) if p_costo_live > 0 else 0
+        st.write(f"DEBUG: factor={factor:.4f}, sugerido={precio_sugerido}")  # ← agrega esta línea
 
         if precio_sugerido > 0:
             st.success(f"💡 Precio de venta sugerido con 30% de ganancia: **${precio_sugerido:,.0f}**")
