@@ -20,13 +20,28 @@ def vista_admin_inventario(conn):
     # ==========================================
     with st.expander("➕ Añadir Nuevo Producto", expanded=True):
         nuevo_id = int(df['ID'].max() + 1) if not df.empty else 1
-        st.info(f"ID Automático: {nuevo_id}")
+
+        # Precio sugerido fuera del form para que se actualice en tiempo real
+        p_costo_prev = st.number_input("Precio Costo *", min_value=0, key="costo_preview")
+
+        # Calcular precio sugerido con 30% de ganancia según la fórmula del sistema
+        # ganancia = (p_venta/1.19) - (p_venta*0.038) - costo = costo * 0.30
+        # p_venta * (1/1.19 - 0.038) = costo * 1.30
+        factor = (1 / 1.19) - 0.038
+        precio_sugerido = round((p_costo_prev * 1.30) / factor) if p_costo_prev > 0 else 0
+
+        if precio_sugerido > 0:
+            st.info(f"💡 Precio de venta sugerido (30% ganancia): **${precio_sugerido:,.0f}**")
 
         with st.form("form_nuevo_prod", clear_on_submit=True):
             nombre = st.text_input("Nombre del Producto *")
             c1, c2, c3 = st.columns(3)
-            p_venta = c1.number_input("Precio Venta *", min_value=0)
-            p_costo = c2.number_input("Precio Costo *", min_value=0)
+            p_costo = c1.number_input("Precio Costo *", min_value=0, value=p_costo_prev)
+            p_venta = c2.number_input(
+                f"Precio Venta * (sugerido: ${precio_sugerido:,})" if precio_sugerido > 0 else "Precio Venta *",
+                min_value=0,
+                value=precio_sugerido
+            )
             stock_ini = c3.number_input("Stock Inicial *", min_value=0)
 
             ca, cb, cc = st.columns(3)
