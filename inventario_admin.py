@@ -1,23 +1,24 @@
 import streamlit as st
 import pandas as pd
 
+
 def vista_admin_inventario(conn):
     st.header("🛠️ Gestión de Productos")
-    
-    # 1. CARGA Y LIMPIEZA (Aseguramos 10 columnas)
+
+    # ==========================================
+    # 1. CARGA Y LIMPIEZA
+    # ==========================================
     df = conn.read(worksheet="Inventario", ttl=0)
-    df = df.iloc[:, :10] # Forzamos lectura de las 10 columnas
+    df = df.iloc[:, :10]
     df.columns = ['ID', 'Nombre', 'Precio', 'Costo', 'Stock', 'Codigo Barra', 'Grupo', 'Material', 'Granel', 'Ganancia']
-    
-    # Limpieza para evitar errores de tipo
+
     for col in ['Nombre', 'Codigo Barra', 'Grupo', 'Material', 'Granel']:
         df[col] = df[col].astype(str).replace('nan', '')
 
-    tab1, tab2, tab3 = st.tabs(["➕ Añadir Producto", "📝 Modificar", "🗑️ Eliminar"])
-
-    # --- TAB 1: AÑADIR ---
-    with tab1:
-        st.subheader("🆕 Ingresar Nuevo Producto")
+    # ==========================================
+    # 2. FORMULARIO AÑADIR PRODUCTO
+    # ==========================================
+    with st.expander("➕ Añadir Nuevo Producto", expanded=True):
         nuevo_id = int(df['ID'].max() + 1) if not df.empty else 1
         st.info(f"ID Automático: {nuevo_id}")
 
@@ -27,82 +28,146 @@ def vista_admin_inventario(conn):
             p_venta = c1.number_input("Precio Venta *", min_value=0)
             p_costo = c2.number_input("Precio Costo *", min_value=0)
             stock_ini = c3.number_input("Stock Inicial *", min_value=0)
-            
+
             ca, cb, cc = st.columns(3)
-            grupo = ca.selectbox("Grupo", ["Clavos y Anclajes", "Electrico", "Fiting", "Herrajes", "Herramientas", "Hogar", "Jardinería", "Pintura", "Químicos", "Seguridad", "Tornillería"])
-            material = cb.selectbox("Material", ["ARIDO", "BRONCE", "COBRE", "MADERA", "METAL", "OTRO", "PLASTICO", "PVC", "QUIMICO", "SILICONA"])
+            grupo = ca.selectbox("Grupo", ["Clavos y Anclajes", "Electrico", "Fiting", "Herrajes",
+                                            "Herramientas", "Hogar", "Jardinería", "Pintura",
+                                            "Químicos", "Seguridad", "Tornillería"])
+            material = cb.selectbox("Material", ["ARIDO", "BRONCE", "COBRE", "MADERA", "METAL",
+                                                  "OTRO", "PLASTICO", "PVC", "QUIMICO", "SILICONA"])
             granel = cc.selectbox("Granel", ["No", "Si"])
-            
             c_barra = st.text_input("Código de Barra (Opcional)")
-            
+
             if st.form_submit_button("Guardar en Inventario"):
                 if nombre and p_venta > 0:
-                    # CALCULAMOS GANANCIA ANTES DE GUARDAR
                     ganancia_n = (p_venta / 1.19) - (p_venta * 0.038) - p_costo
-                    
-                    # CREAMOS LA FILA CON LAS 10 COLUMNAS EXACTAS
                     nueva_fila = pd.DataFrame([[
-                        nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini, 
+                        nuevo_id, nombre.strip(), p_venta, p_costo, stock_ini,
                         str(c_barra), grupo, material, granel, ganancia_n
                     ]], columns=df.columns)
-                    
                     df_final = pd.concat([df, nueva_fila], ignore_index=True)
                     conn.update(worksheet="Inventario", data=df_final)
-                    st.success("✅ Producto añadido con ganancia calculada.")
+                    st.success("✅ Producto añadido correctamente.")
                     st.rerun()
                 else:
                     st.error("❌ Nombre y Precio son obligatorios.")
 
-    # --- TAB 2: MODIFICAR ---
-    with tab2:
-        if not df.empty:
-            prod_edit = st.selectbox("Selecciona producto:", df['Nombre'].tolist(), key="ed_sel")
-            idx = df[df['Nombre'] == prod_edit].index
-            datos = df.loc[idx].iloc[0] # Usamos .iloc[0] para evitar errores de series
-            
-            with st.form("form_edit_inv"):
+    # ==========================================
+    # 3. FORMULARIO DE EDICIÓN (se activa al pulsar ✏️)
+    # ==========================================
+    if 'editar_id' in st.session_state and st.session_state.editar_id is not None:
+        eid = st.session_state.editar_id
+        fila = df[df['ID'] == eid]
+        if not fila.empty:
+            datos = fila.iloc[0]
+            st.divider()
+            st.subheader(f"📝 Editando: {datos['Nombre']}")
+            with st.form("form_editar_inline"):
                 n_n = st.text_input("Nombre", value=str(datos['Nombre']))
                 col_v, col_c, col_s = st.columns(3)
                 n_pv = col_v.number_input("Precio Venta", value=int(datos['Precio']))
                 n_pc = col_c.number_input("Precio Costo", value=int(datos['Costo']))
                 n_st = col_s.number_input("Stock", value=int(datos['Stock']))
-                
-                # Recalcular ganancia en vivo para el update
-                n_gan = (n_pv / 1.19) - (n_pv * 0.038) - n_pc
 
-                if st.form_submit_button("Actualizar"):
-                    df.at[idx[0], 'Nombre'] = str(n_n)
-                    df.at[idx[0], 'Precio'] = float(n_pv)
-                    df.at[idx[0], 'Costo'] = float(n_pc)
-                    df.at[idx[0], 'Stock'] = int(n_st)
-                    df.at[idx[0], 'Ganancia'] = float(n_gan)
-                    
+                ca2, cb2, cc2 = st.columns(3)
+                grupos = ["Clavos y Anclajes", "Electrico", "Fiting", "Herrajes",
+                          "Herramientas", "Hogar", "Jardinería", "Pintura",
+                          "Químicos", "Seguridad", "Tornillería"]
+                materiales = ["ARIDO", "BRONCE", "COBRE", "MADERA", "METAL",
+                              "OTRO", "PLASTICO", "PVC", "QUIMICO", "SILICONA"]
+                g_idx = grupos.index(datos['Grupo']) if datos['Grupo'] in grupos else 0
+                m_idx = materiales.index(datos['Material']) if datos['Material'] in materiales else 0
+                n_grupo = ca2.selectbox("Grupo", grupos, index=g_idx)
+                n_mat = cb2.selectbox("Material", materiales, index=m_idx)
+                n_gran = cc2.selectbox("Granel", ["No", "Si"],
+                                       index=0 if datos['Granel'] == 'No' else 1)
+                n_cb = st.text_input("Código de Barra", value=str(datos['Codigo Barra']))
+
+                col_btn1, col_btn2 = st.columns([1, 4])
+                guardar = col_btn1.form_submit_button("💾 Guardar", type="primary")
+                cancelar = col_btn2.form_submit_button("✖ Cancelar")
+
+                if guardar:
+                    n_gan = (n_pv / 1.19) - (n_pv * 0.038) - n_pc
+                    idx_real = df[df['ID'] == eid].index[0]
+                    df.at[idx_real, 'Nombre'] = str(n_n)
+                    df.at[idx_real, 'Precio'] = float(n_pv)
+                    df.at[idx_real, 'Costo'] = float(n_pc)
+                    df.at[idx_real, 'Stock'] = int(n_st)
+                    df.at[idx_real, 'Grupo'] = n_grupo
+                    df.at[idx_real, 'Material'] = n_mat
+                    df.at[idx_real, 'Granel'] = n_gran
+                    df.at[idx_real, 'Codigo Barra'] = str(n_cb)
+                    df.at[idx_real, 'Ganancia'] = float(n_gan)
                     conn.update(worksheet="Inventario", data=df)
-                    st.success("✅ Actualizado con nueva ganancia.")
+                    st.session_state.editar_id = None
+                    st.success("✅ Producto actualizado.")
                     st.rerun()
 
-    # --- TAB 3: ELIMINAR ---
-    with tab3:
-        if not df.empty:
-            p_del = st.selectbox("Producto a eliminar:", df['Nombre'].tolist(), key="del_sel")
-            if st.button("Confirmar Borrado", type="primary"):
-                df_f = df[df['Nombre'] != p_del]
-                conn.update(worksheet="Inventario", data=df_f)
-                st.success("✅ Eliminado.")
-                st.rerun()
+                if cancelar:
+                    st.session_state.editar_id = None
+                    st.rerun()
 
-    # Resumen visual con formatos corregidos
+    # ==========================================
+    # 4. TABLA CON BOTONES POR FILA
+    # ==========================================
     st.divider()
     st.subheader("📋 Estado Actual del Inventario")
-    st.dataframe(
-        df.style.format({
-            "ID": "{:.0f}",           # Esto quita todos los decimales del ID
-            "Precio": "${:,.0f}",     # Moneda sin decimales
-            "Costo": "${:,.0f}",      # Moneda sin decimales
-            "Stock": "{:.0f}",        # Stock como entero
-            "Ganancia": "${:,.0f}",   # Ganancia como moneda sin decimales
-            "Codigo Barra": lambda x: "" if str(x).lower() == "none" else str(x).split('.')[0]
-        }), 
-        use_container_width=True, 
-        hide_index=True
-    )
+
+    if df.empty:
+        st.info("No hay productos en el inventario.")
+    else:
+        # Cabecera
+        cols_header = st.columns([0.5, 2.5, 1, 1, 0.8, 1.5, 1.2, 1.2, 0.8, 1, 0.6, 0.6])
+        headers = ["ID", "Nombre", "Precio", "Costo", "Stock",
+                   "Cód. Barra", "Grupo", "Material", "Granel", "Ganancia", "✏️", "🗑️"]
+        for col, h in zip(cols_header, headers):
+            col.markdown(f"**{h}**")
+
+        st.divider()
+
+        # Inicializar estado de confirmación de borrado
+        if 'confirmar_borrar_id' not in st.session_state:
+            st.session_state.confirmar_borrar_id = None
+
+        for _, row in df.iterrows():
+            pid = int(row['ID'])
+            cols = st.columns([0.5, 2.5, 1, 1, 0.8, 1.5, 1.2, 1.2, 0.8, 1, 0.6, 0.6])
+
+            cols[0].write(pid)
+            cols[1].write(row['Nombre'])
+            cols[2].write(f"${int(row['Precio']):,}")
+            cols[3].write(f"${int(row['Costo']):,}")
+            cols[4].write(int(row['Stock']))
+            codigo = str(row['Codigo Barra']).split('.')[0] if str(row['Codigo Barra']) not in ['nan', 'None', ''] else '-'
+            cols[5].write(codigo)
+            cols[6].write(row['Grupo'])
+            cols[7].write(row['Material'])
+            cols[8].write(row['Granel'])
+            cols[9].write(f"${int(row['Ganancia']):,}")
+
+            # Botón editar
+            if cols[10].button("✏️", key=f"edit_{pid}"):
+                st.session_state.editar_id = pid
+                st.session_state.confirmar_borrar_id = None
+                st.rerun()
+
+            # Botón eliminar (con confirmación)
+            if cols[11].button("🗑️", key=f"del_{pid}"):
+                st.session_state.confirmar_borrar_id = pid
+                st.session_state.editar_id = None
+
+            # Confirmación de borrado inline
+            if st.session_state.confirmar_borrar_id == pid:
+                with st.container():
+                    st.warning(f"¿Seguro que quieres eliminar **{row['Nombre']}**?")
+                    col_si, col_no, _ = st.columns([1, 1, 6])
+                    if col_si.button("✅ Sí, eliminar", key=f"confirm_del_{pid}", type="primary"):
+                        df_f = df[df['ID'] != pid]
+                        conn.update(worksheet="Inventario", data=df_f)
+                        st.session_state.confirmar_borrar_id = None
+                        st.success("✅ Producto eliminado.")
+                        st.rerun()
+                    if col_no.button("❌ Cancelar", key=f"cancel_del_{pid}"):
+                        st.session_state.confirmar_borrar_id = None
+                        st.rerun()
